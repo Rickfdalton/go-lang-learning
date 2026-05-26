@@ -27,7 +27,5 @@ func main(){
 		wg.Add(1)
 		go receive(ch, &wg)
 	}
-
 	wg.Wait()
-
 }
