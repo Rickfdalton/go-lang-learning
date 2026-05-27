@@ -50,7 +50,7 @@ func handleConnection(conn net.Conn){
 			return
 		}
 		fmt.Printf("request:%s", bytes)
-		line:= "From Backend: "+fmt.Sprintf("Echo: %s",bytes)
+		line:= "From Backend: "+string(bytes)
 		fmt.Printf("response:%s", line)
 		
 		_,err = conn.Write([]byte(line))
