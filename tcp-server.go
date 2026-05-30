@@ -6,6 +6,7 @@ import (
 	"net"
 	"io"
 	"bufio"
+	"time"
 )
 
 func main(){
@@ -24,6 +25,8 @@ func main(){
 	defer listener.Close()
 	fmt.Printf("server listening on %s\n", listener.Addr())
 
+	ch:= make(chan string, 100)
+	go logger(ch)
 	for{
 		conn,err:= listener.Accept()
 		if err!= nil {
@@ -31,13 +34,12 @@ func main(){
 			continue
 		}
 		//handle connection
-		go handleConnection(conn)
+		go handleConnection(ch,conn)
 	}
 
 }
 
-
-func handleConnection(conn net.Conn){
+func handleConnection(ch chan string,conn net.Conn){
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
 	for{
@@ -49,7 +51,7 @@ func handleConnection(conn net.Conn){
 			}
 			return
 		}
-		fmt.Printf("request:%s", bytes)
+		ch<-fmt.Sprintf("[%s] %s", conn.RemoteAddr(), string(bytes))
 		line:= "From Backend: "+string(bytes)
 		fmt.Printf("response:%s", line)
 		
@@ -60,4 +62,11 @@ func handleConnection(conn net.Conn){
 		}
 	}
 
+}
+
+func logger(ch chan string){
+	for msg:= range ch{
+		fmt.Printf("[%s] REQUEST RECEIVED: %s", time.Now().Format("15:04:05"), msg)
+	}
+	return
 }
