@@ -25,7 +25,7 @@ func main(){
 	defer listener.Close()
 	fmt.Printf("server listening on %s\n", listener.Addr())
 
-	ch:= make(chan string, 100)
+	ch:= make(chan string, 2)
 	go logger(ch)
 	for{
 		conn,err:= listener.Accept()
@@ -51,7 +51,12 @@ func handleConnection(ch chan string,conn net.Conn){
 			}
 			return
 		}
-		ch<-fmt.Sprintf("[%s] %s", conn.RemoteAddr(), string(bytes))
+		// non blocking logging.
+		select{
+		case ch<-fmt.Sprintf("[%s] %s", conn.RemoteAddr(), string(bytes)):
+		case <-time.After(100 * time.Millisecond):
+			fmt.Println("channel full")
+		}
 		line:= "From Backend: "+string(bytes)
 		fmt.Printf("response:%s", line)
 		
@@ -66,6 +71,7 @@ func handleConnection(ch chan string,conn net.Conn){
 
 func logger(ch chan string){
 	for msg:= range ch{
+		time.Sleep(2 * time.Second) 
 		fmt.Printf("[%s] REQUEST RECEIVED: %s", time.Now().Format("15:04:05"), msg)
 	}
 	return
