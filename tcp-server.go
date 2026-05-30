@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const WORKERS int = 10
+
 func main(){
 	if len(os.Args) <2 {
 		fmt.Println("Usage: go run tcp-server.go <port>")
@@ -21,12 +23,15 @@ func main(){
 		fmt.Println("failed to create listener:", err)
 		return
 	}
+	var ch = make(chan string, 100)
+	var jobs= make(chan net.Conn, WORKERS)
 
 	defer listener.Close()
 	fmt.Printf("server listening on %s\n", listener.Addr())
-
-	ch:= make(chan string, 2)
 	go logger(ch)
+	for i:=0;i<WORKERS;i++{
+		go worker(jobs,ch)
+	}
 	for{
 		conn,err:= listener.Accept()
 		if err!= nil {
@@ -34,7 +39,7 @@ func main(){
 			continue
 		}
 		//handle connection
-		go handleConnection(ch,conn)
+		jobs <- conn
 	}
 
 }
@@ -75,4 +80,10 @@ func logger(ch chan string){
 		fmt.Printf("[%s] REQUEST RECEIVED: %s", time.Now().Format("15:04:05"), msg)
 	}
 	return
+}
+
+func worker(jobs chan net.Conn, ch chan string){
+	for conn:= range jobs{
+		handleConnection(ch,conn)
+	}
 }
