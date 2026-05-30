@@ -8,6 +8,16 @@ import (
 	"time"
 )
 
+
+func dialServer() (net.Conn, error){
+	conn, err := net.Dial("tcp", "localhost:9090")
+	if err!= nil {
+		fmt.Println("cannot dial server", err)
+			return nil, err
+	}
+	return conn, nil
+}
+
 func sendMessage(conn net.Conn,msg string ) (string, error) {	
 	_,err := conn.Write([]byte(msg+"\n"))
 	if err!= nil{
@@ -29,11 +39,12 @@ func sendMessage(conn net.Conn,msg string ) (string, error) {
 }
 
 func main(){
+	var conn net.Conn
+	var err error
 
-	conn, err := net.Dial("tcp", "localhost:9090")
-	if err!= nil {
-		fmt.Println("cannot dial server", err)
-			return 
+	conn, err = dialServer()
+	if err!=nil{
+		return
 	}
 	defer conn.Close()
 
@@ -48,9 +59,19 @@ func main(){
 		response, err :=sendMessage(conn,msg)
 		if err!= nil {
 			fmt.Println("Connection expired")
-		}else{
-			fmt.Println(response)
+			var err2,err3 error
+			conn.Close()
+			fmt.Println("Reconnecting..")
+			conn, err2 =  dialServer()
+			if err2!= nil {
+				return
+			}
+			response, err3 =sendMessage(conn,msg)
+			if err3!=nil{
+				return
+			}						
 		}
+		fmt.Println(response)
 		conn.SetDeadline(time.Now().Add(5 * time.Second))
 	
 	}
