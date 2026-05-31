@@ -7,6 +7,9 @@ import (
 	"io"
 	"bufio"
 	"time"
+	"os/signal"
+	"syscall"
+	"sync"
 )
 
 const WORKERS int = 10
@@ -25,19 +28,32 @@ func main(){
 	}
 	var ch = make(chan string, 100)
 	var jobs= make(chan net.Conn, WORKERS)
+	var sigCh= make(chan os.Signal, 1)
+	var quit = make(chan struct {})
+
+	var wg sync.WaitGroup
 
 	defer listener.Close()
 	fmt.Printf("server listening on %s\n", listener.Addr())
 	go logger(ch)
 	for i:=0;i<WORKERS;i++{
-		go worker(jobs,ch)
+		wg.Add(1)
+		go worker(jobs,ch,&wg)
 	}
-	for{
+
+	go checkInterrupt(sigCh,quit,jobs,&wg,listener)
+	for {
 		conn,err:= listener.Accept()
 		if err!= nil {
-			fmt.Println("failed to accept connection: ", err)
-			continue
+		select {
+			case <-quit:
+				return   // deliberate shutdown
+			default:
+				fmt.Println("failed to accept connection: ", err)
+				continue 
+			}
 		}
+		
 		//handle connection
 		jobs <- conn
 	}
@@ -82,8 +98,19 @@ func logger(ch chan string){
 	return
 }
 
-func worker(jobs chan net.Conn, ch chan string){
+func worker(jobs chan net.Conn, ch chan string, wg *sync.WaitGroup){
+	defer 	wg.Done()
 	for conn:= range jobs{
 		handleConnection(ch,conn)
 	}
+}
+
+func checkInterrupt(sigCh chan os.Signal,quit chan struct{}, jobs chan net.Conn, wg *sync.WaitGroup, listener net.Listener){
+	signal.Notify(sigCh, syscall.SIGINT)
+	<-sigCh
+	fmt.Println("Ungraceful shutdown")
+	close(quit)
+	listener.Close()
+	close(jobs)
+	wg.Wait()
 }
