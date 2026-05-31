@@ -72,7 +72,7 @@ func main(){
 			}						
 		}
 		fmt.Println(response)
-		conn.SetDeadline(time.Now().Add(5 * time.Second))
+		conn.SetDeadline(time.Now().Add(10 * time.Second))
 	
 	}
 	
