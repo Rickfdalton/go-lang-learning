@@ -33,6 +33,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+	"bufio"
 )
 
 // ServerConfig holds runtime configuration for the server.
@@ -280,7 +281,7 @@ func (s *Server) waitForShutdown() {
 	case <-time.After(10 * time.Second):
 		log.Println("timeout! forcing exit")
 	}
-	
+
 	s.printStats()
 
 

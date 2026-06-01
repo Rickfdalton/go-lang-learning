@@ -38,6 +38,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"io"
 )
 
 // ClientConfig holds runtime configuration.
@@ -153,10 +154,10 @@ func runWorker(workerID, numRequests int, config ClientConfig, metrics *Metrics,
 
 	log.Printf("[WORKER %d] Connected to server", workerID)
 
-	reader := bufio.NewReader(nil) // TODO: replace nil with your conn
+	reader := bufio.NewReader(conn) // TODO: replace nil with your conn
 
 	for i := 0; i < numRequests; i++ {
-		result := sendRequest(workerID, i, reader, nil, config) // TODO: pass conn
+		result := sendRequest(workerID, i, reader, conn, config) // TODO: pass conn
 		results <- result
 
 		// Update metrics
@@ -220,7 +221,7 @@ func sendRequest(workerID, requestID int, reader *bufio.Reader, conn net.Conn, c
 	}
 
 	conn.SetReadDeadline(time.Now().Add(config.Timeout))
-	str, err2:=reader.ReadString('\n')
+	response, err2:=reader.ReadString('\n')
 	if err2!= nil{
 		if err2!= io.EOF {
 			fmt.Printf("[WORKER %d] Cannot read from server: %s",workerID, err2.Error())
@@ -229,9 +230,10 @@ func sendRequest(workerID, requestID int, reader *bufio.Reader, conn net.Conn, c
 		result.Error  =err2.Error() 
 		return result
 	}
+	fmt.Println("Response from server", response)
 
 	result.Latency = time.Since(start)
-	result.success = true
+	result.Success = true
 	return result
 }
 
