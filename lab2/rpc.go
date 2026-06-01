@@ -111,8 +111,7 @@ func (r *ChordRPC) Notify(args *NotifyArgs, reply *NotifyReply) error {
 //
 // TODO: implement
 func (r *ChordRPC) Put(args *PutArgs, reply *PutReply) error {
-	r.node.localPut(args.Key, args.Value)
-	return nil
+	return r.node.Put(args.Key, args.Value)
 }
 
 // ── Get ───────────────────────────────────────────────────────
@@ -122,11 +121,13 @@ func (r *ChordRPC) Put(args *PutArgs, reply *PutReply) error {
 //
 // TODO: implement
 func (r *ChordRPC) Get(args *GetArgs, reply *GetReply) error {
-	value, found := r.node.localGet(args.Key)
-
+	value, err := r.node.Get(args.Key)
+	if err != nil {
+		reply.Found = false
+		return nil
+	}
 	reply.Value = value
-	reply.Found = found
-
+	reply.Found = true
 	return nil
 }
 
@@ -137,8 +138,8 @@ func (r *ChordRPC) Get(args *GetArgs, reply *GetReply) error {
 //
 // TODO: implement
 func (r *ChordRPC) Delete(args *DeleteArgs, reply *DeleteReply) error {
-	reply.Deleted = r.node.localDelete(args.Key)
-	return nil
+	reply.Deleted = true
+	return r.node.Delete(args.Key)
 }
 
 // ============================================================
